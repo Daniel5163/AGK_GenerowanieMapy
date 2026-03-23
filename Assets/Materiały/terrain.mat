@@ -43,6 +43,10 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _Grass:
+        m_Texture: {fileID: 2800000, guid: f3bedf0a40d6c4745b0d05c8caeabb87, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _GrassTex:
         m_Texture: {fileID: 2800000, guid: f3bedf0a40d6c4745b0d05c8caeabb87, type: 3}
         m_Scale: {x: 1, y: 1}
@@ -63,16 +67,32 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _Rock:
+        m_Texture: {fileID: 2800000, guid: 30ba709e3170b7b429d98a8098708938, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _RockTex:
         m_Texture: {fileID: 2800000, guid: 30ba709e3170b7b429d98a8098708938, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Sand:
+        m_Texture: {fileID: 2800000, guid: 21c377a819e193b468a3e4103e362f7e, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _SandTex:
         m_Texture: {fileID: 2800000, guid: 21c377a819e193b468a3e4103e362f7e, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _Snow:
+        m_Texture: {fileID: 2800000, guid: d98c577df64021647b3a84b4a3c7fea4, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _SnowTex:
         m_Texture: {fileID: 2800000, guid: d98c577df64021647b3a84b4a3c7fea4, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Water:
+        m_Texture: {fileID: 2800000, guid: a07b1afb942116b4bb41e3cd1b5725ea, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _WaterTex:
@@ -81,6 +101,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _Blend: 0.2
     - _BumpScale: 1
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
@@ -88,25 +109,38 @@ Material:
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _GrassHeight: 0.4
+    - _GrassHeight: 0.032
+    - _GrassLevel: 0.5
     - _HeightMultiplier: 50
     - _Metallic: 0
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
-    - _RockHeight: 0.6
-    - _RockSteepness: 0.5
-    - _SandHeight: 0.25
+    - _RiverBlend: 0.143
+    - _RiverDark: 1
+    - _RiverDarkness: 1
+    - _RiverWidthFactor: 2
+    - _RockHeight: 0
+    - _RockLevel: 0.7
+    - _RockSteepness: 0.192
+    - _SandEnd: 0.32
+    - _SandHeight: 0.03
+    - _SandLevel: 0.28
+    - _SandStart: 0.22
+    - _Scale: 0.05
     - _SmoothnessTextureChannel: 0
-    - _SnowHeight: 0.8
-    - _SnowSteepness: 0.3
+    - _SnowHeight: 0.676
+    - _SnowLevel: 0.85
+    - _SnowSteepness: 0.075
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _TextureScale: 0.05
     - _UVSec: 0
-    - _WaterHeight: 0.2
+    - _WaterHeight: 0.02
+    - _WaterLevel: 0.45
     - _ZWrite: 1
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _WaterColor: {r: 0.09999997, g: 0.29999998, b: 0.6, a: 1}
   m_BuildTextureStacks: []

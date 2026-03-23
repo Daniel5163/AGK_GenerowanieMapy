@@ -14,8 +14,8 @@ public class CameraController : MonoBehaviour
         Cursor.lockState = CursorLockMode.Locked;
     }
 
-    public TerrainGenerator terrain;
-    public float minHeightAboveTerrain = 2f;
+    public ProceduralTerrain terrain;
+    public float minHeightAboveTerrain = 30f;
 
     void LateUpdate()
     {
