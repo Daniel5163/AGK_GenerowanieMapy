@@ -1,340 +1,169 @@
-using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine;
 
-[RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
+[RequireComponent(typeof(MeshFilter), typeof(MeshRenderer), typeof(MeshCollider))]
 public class ProceduralTerrain : MonoBehaviour
 {
+    [Header("General Settings")]
     public int resolution = 200;
-    public float heightMultiplier = 25f;
-    public float oceanLevel = 0.18f;
-    public float oceanWidth = 0.25f;
-    public int seed = 0;
-    public float riverErosionStrength = 0.6f;
-    public int riverSmoothIterations = 3;
+    public float heightMultiplier = 68f;
+    public float worldScale = 1f;
+    public bool randomSeedOnPlay = true;
+    public int seed;
 
-    Mesh mesh;
-    float[,] heightMap;
-    Vector3[] vertices;
-    int[] triangles;
-    Vector2[] uv;
-    List<Vector2> riverPath;
+    [Header("Terrain Noise")]
+    public int octaves = 7;
+    public float persistence = 0.47f;
+    public float lacunarity = 2.12f;
+    public float baseFrequency = 1.38f;
+
+    [Header("Water")]
+    public float seaLevel = 0.26f;
+    public float waterLevelY = 13f;
+
+    [Header("River Settings")]
+    public float riverFlowSpeed = 2.0f;
+    public float riverTiling = 8f;
+    public float riverWidth = 1.8f;
+
+    [Header("Lake Settings")]
+    public int lakeSearchStep = 6;
+    public float lakeDepthMultiplier = 0.78f;
+
+    [Header("Materials")]
+    public Material seaLakeMaterial;
+
+    [Header("Prefabs")]
+    public List<GameObject> treePrefabs = new List<GameObject>();
+    public List<GameObject> grassPrefabs = new List<GameObject>();
+    public List<GameObject> rockPrefabs = new List<GameObject>();
+    public GameObject waterPrefab;
+
+    private Mesh mesh;
+    private float[,] heightMap;
+    private int[,] biomeMap;
+    private bool[,] isRiver;                   
+    private MeshCollider meshCollider;
+    private List<Material> riverMaterials = new List<Material>();
 
     void Start()
     {
+        meshCollider = GetComponent<MeshCollider>();
+        if (randomSeedOnPlay)
+            seed = Random.Range(-999999, 999999);
         Generate();
     }
 
-    void Generate()
+    public void Generate()
     {
+        ClearOldDetails();
+        riverMaterials.Clear();
+
         mesh = new Mesh();
-        GetComponent<MeshFilter>().mesh = mesh;
+        GetComponent<MeshFilter>().sharedMesh = mesh;
+
         heightMap = new float[resolution + 1, resolution + 1];
-        riverPath = new List<Vector2>();
-        GenerateTerrain();
-        FindAndCarveRiver();
-        SmoothRiver();
-        ApplyOcean();
+        biomeMap = new int[resolution + 1, resolution + 1];
+        isRiver = new bool[resolution + 1, resolution + 1];   
+
+        GenerateHeightMap();
+        GenerateBiomes();
+        CreateLakes();
+        GenerateRiver();                   
         BuildMesh();
-        UpdateMesh();
+        UpdateCollider();
+        SpawnDetails();
+        GenerateSeaAndLakesWater();
     }
 
-    void GenerateTerrain()
+    void GenerateHeightMap()
     {
-        Random.InitState(seed);
+        float offsetX = seed * 0.00125f;
+        float offsetZ = seed * 0.0013f;
+
         for (int x = 0; x <= resolution; x++)
         {
-            for (int y = 0; y <= resolution; y++)
+            for (int z = 0; z <= resolution; z++)
             {
-                float nx = (float)x / resolution;
-                float ny = (float)y / resolution;
+                float nx = (float)x / resolution * baseFrequency + offsetX;
+                float nz = (float)z / resolution * baseFrequency + offsetZ;
 
-                float h = Mathf.PerlinNoise(nx * 3.2f + seed * 0.17f, ny * 3.2f + seed * 0.23f);
-                h += Mathf.PerlinNoise(nx * 8f + 1.2f, ny * 8f + 2.3f) * 0.38f;
-                h += Mathf.PerlinNoise(nx * 16f - 3.1f, ny * 16f + 1.7f) * 0.14f;
+                float height = 0f;
+                float amp = 1f;
+                float freq = 1f;
+                float maxAmp = 0f;
 
-                h = Mathf.Pow(h, 1.15f);
-                heightMap[x, y] = Mathf.Clamp01(h * 0.72f);
-            }
-        }
-
-        for (int i = 0; i < 2; i++)
-        {
-            float[,] smoothed = new float[resolution + 1, resolution + 1];
-            for (int x = 1; x < resolution; x++)
-            {
-                for (int y = 1; y < resolution; y++)
+                for (int i = 0; i < octaves; i++)
                 {
-                    float avg = 0;
-                    for (int dx = -1; dx <= 1; dx++)
-                    {
-                        for (int dy = -1; dy <= 1; dy++)
-                        {
-                            avg += heightMap[x + dx, y + dy];
-                        }
-                    }
-                    smoothed[x, y] = avg / 9f;
+                    float sample = Mathf.PerlinNoise(nx * freq, nz * freq);
+                    sample = 1f - Mathf.Abs(sample * 2f - 1f);
+                    height += sample * amp;
+                    maxAmp += amp;
+                    amp *= persistence;
+                    freq *= lacunarity;
                 }
-            }
 
-            for (int x = 1; x < resolution; x++)
-            {
-                for (int y = 1; y < resolution; y++)
-                {
-                    heightMap[x, y] = smoothed[x, y];
-                }
+                height /= maxAmp;
+                height = Mathf.Pow(height, 1.15f);
+
+                float normalizedX = (float)x / resolution;
+                float ocean = Mathf.Pow(1f - normalizedX, 2.85f);
+                height = height * (1f - ocean * 0.78f);
+                height *= Mathf.Lerp(0.68f, 1.05f, normalizedX);
+
+                heightMap[x, z] = Mathf.Clamp01(height);
             }
         }
     }
 
-    void FindAndCarveRiver()
+    void GenerateBiomes()
     {
-        Vector2 highestPoint = FindHighestPointInMountains();
-        Vector2 currentPos = highestPoint;
-        riverPath.Clear();
-        riverPath.Add(currentPos);
-
-        int maxSteps = resolution * 8;
-        int stuckCounter = 0;
-
-        for (int step = 0; step < maxSteps; step++)
-        {
-            int x = Mathf.Clamp(Mathf.RoundToInt(currentPos.x * resolution), 0, resolution);
-            int y = Mathf.Clamp(Mathf.RoundToInt(currentPos.y * resolution), 0, resolution);
-
-            float currentHeight = heightMap[x, y];
-
-            float lowestNeighbor = currentHeight;
-            Vector2 bestDirection = currentPos;
-            bool foundLower = false;
-
-            for (int dx = -1; dx <= 1; dx++)
+        for (int x = 0; x <= resolution; x++)
+            for (int z = 0; z <= resolution; z++)
             {
-                for (int dy = -1; dy <= 1; dy++)
-                {
-                    if (dx == 0 && dy == 0) continue;
-
-                    float nx = currentPos.x + dx * 0.01f;
-                    float ny = currentPos.y + dy * 0.01f;
-
-                    if (nx < 0 || nx > 1 || ny < 0 || ny > 1) continue;
-
-                    int ix = Mathf.RoundToInt(nx * resolution);
-                    int iy = Mathf.RoundToInt(ny * resolution);
-                    float neighborHeight = heightMap[ix, iy];
-
-                    if (neighborHeight < lowestNeighbor - 0.005f)
-                    {
-                        lowestNeighbor = neighborHeight;
-                        bestDirection = new Vector2(nx, ny);
-                        foundLower = true;
-                    }
-                }
+                float h = heightMap[x, z];
+                if (h < seaLevel + 0.04f) biomeMap[x, z] = 0;
+                else if (h < seaLevel + 0.09f) biomeMap[x, z] = 1;
+                else if (h < 0.53f) biomeMap[x, z] = 2;
+                else if (h < 0.76f) biomeMap[x, z] = 3;
+                else biomeMap[x, z] = 4;
             }
-
-            if (!foundLower)
-            {
-                stuckCounter++;
-                if (stuckCounter > 20)
-                {
-                    for (int dx = -1; dx <= 1; dx++)
-                    {
-                        for (int dy = -1; dy <= 1; dy++)
-                        {
-                            if (dx == 0 && dy == 0) continue;
-                            float nx = currentPos.x + dx * 0.01f;
-                            float ny = currentPos.y + dy * 0.01f;
-                            if (nx >= 0 && nx <= 1 && ny >= 0 && ny <= 1)
-                            {
-                                bestDirection = new Vector2(nx, ny);
-                                break;
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    currentPos = bestDirection;
-                    continue;
-                }
-            }
-
-            currentPos = bestDirection;
-            riverPath.Add(currentPos);
-
-            if (currentPos.x < oceanWidth + 0.05f)
-                break;
-
-            if (currentPos.y < 0.05f || currentPos.y > 0.95f)
-                break;
-        }
-
-        CarveRiverPath();
     }
 
-    Vector2 FindHighestPointInMountains()
+    void CreateLakes()
     {
-        float maxHeight = 0;
-        Vector2 highest = new Vector2(0.85f, 0.5f);
-
-        for (int x = (int)(resolution * 0.7f); x <= resolution; x++)
+        for (int x = lakeSearchStep; x < resolution; x += lakeSearchStep)
         {
-            for (int y = 0; y <= resolution; y++)
+            for (int z = lakeSearchStep; z < resolution; z += lakeSearchStep)
             {
-                float ny = (float)y / resolution;
-                if (ny < 0.15f || ny > 0.85f) continue;
+                float h = heightMap[x, z];
+                if (h <= seaLevel + 0.12f || h >= 0.48f) continue;
 
-                float h = heightMap[x, y];
-                if (h > maxHeight)
-                {
-                    maxHeight = h;
-                    highest = new Vector2((float)x / resolution, ny);
-                }
-            }
-        }
-
-        return highest;
-    }
-
-    void CarveRiverPath()
-    {
-        float riverDepth = oceanLevel + 0.025f;
-        float erosionRadius = 2.2f;
-        float sandRadius = 3.5f;
-
-        foreach (Vector2 point in riverPath)
-        {
-            int centerX = Mathf.RoundToInt(point.x * resolution);
-            int centerY = Mathf.RoundToInt(point.y * resolution);
-
-            int radius = Mathf.CeilToInt(erosionRadius);
-            int sandRad = Mathf.CeilToInt(sandRadius);
-
-            for (int dx = -sandRad; dx <= sandRad; dx++)
-            {
-                for (int dy = -sandRad; dy <= sandRad; dy++)
-                {
-                    int nx = centerX + dx;
-                    int ny = centerY + dy;
-
-                    if (nx < 0 || nx > resolution || ny < 0 || ny > resolution) continue;
-
-                    float distance = Mathf.Sqrt(dx * dx + dy * dy);
-
-                    if (distance <= erosionRadius)
-                    {
-                        float erosionFactor = 1f - (distance / erosionRadius);
-                        erosionFactor = Mathf.Pow(erosionFactor, 1.5f);
-
-                        float targetHeight = Mathf.Lerp(riverDepth, heightMap[nx, ny], erosionFactor * 0.4f);
-                        heightMap[nx, ny] = Mathf.Min(heightMap[nx, ny], targetHeight);
-
-                        if (distance < erosionRadius * 0.6f)
-                        {
-                            float bankFactor = Mathf.Sin(distance / erosionRadius * Mathf.PI) * 0.15f;
-                            heightMap[nx, ny] = Mathf.Min(heightMap[nx, ny], riverDepth + bankFactor);
-                        }
-                    }
-                    else if (distance <= sandRadius && distance > erosionRadius)
-                    {
-                        float sandFactor = 1f - ((distance - erosionRadius) / (sandRadius - erosionRadius));
-                        sandFactor = Mathf.Pow(sandFactor, 1.2f);
-
-                        float targetHeight = Mathf.Lerp(riverDepth + 0.03f, heightMap[nx, ny], sandFactor * 0.5f);
-                        heightMap[nx, ny] = Mathf.Min(heightMap[nx, ny], targetHeight);
-                    }
-                }
-            }
-        }
-
-        for (int i = 0; i < riverSmoothIterations; i++)
-        {
-            SmoothRiverbanks();
-        }
-    }
-
-    void SmoothRiverbanks()
-    {
-        float[,] newHeightMap = (float[,])heightMap.Clone();
-
-        for (int x = 2; x < resolution - 1; x++)
-        {
-            for (int y = 2; y < resolution - 1; y++)
-            {
-                bool isRiver = false;
-                float riverValue = 0;
-                int riverCount = 0;
-
+                bool isLocalMin = true;
                 for (int dx = -2; dx <= 2; dx++)
                 {
-                    for (int dy = -2; dy <= 2; dy++)
+                    for (int dz = -2; dz <= 2; dz++)
                     {
-                        float h = heightMap[x + dx, y + dy];
-                        if (h < oceanLevel + 0.06f)
-                        {
-                            isRiver = true;
-                            riverValue += h;
-                            riverCount++;
-                        }
+                        if (dx == 0 && dz == 0) continue;
+                        int nx = Mathf.Clamp(x + dx, 0, resolution);
+                        int nz = Mathf.Clamp(z + dz, 0, resolution);
+                        if (heightMap[nx, nz] > h + 0.04f) isLocalMin = false;
                     }
                 }
 
-                if (isRiver && riverCount > 0)
+                if (isLocalMin)
                 {
-                    float avgRiver = riverValue / riverCount;
-                    newHeightMap[x, y] = Mathf.Lerp(heightMap[x, y], avgRiver, 0.5f);
-                }
-            }
-        }
-
-        heightMap = newHeightMap;
-    }
-
-    void SmoothRiver()
-    {
-        for (int i = 0; i < 3; i++)
-        {
-            for (int x = 1; x < resolution; x++)
-            {
-                for (int y = 1; y < resolution; y++)
-                {
-                    if (heightMap[x, y] < oceanLevel + 0.08f)
+                    for (int dx = -3; dx <= 3; dx++)
                     {
-                        float avg = 0;
-                        int count = 0;
-
-                        for (int dx = -1; dx <= 1; dx++)
+                        for (int dz = -3; dz <= 3; dz++)
                         {
-                            for (int dy = -1; dy <= 1; dy++)
-                            {
-                                if (heightMap[x + dx, y + dy] < oceanLevel + 0.1f)
-                                {
-                                    avg += heightMap[x + dx, y + dy];
-                                    count++;
-                                }
-                            }
-                        }
-
-                        if (count > 0)
-                        {
-                            heightMap[x, y] = avg / count;
+                            int nx = Mathf.Clamp(x + dx, 0, resolution);
+                            int nz = Mathf.Clamp(z + dz, 0, resolution);
+                            float dist = Mathf.Sqrt(dx * dx + dz * dz);
+                            float factor = Mathf.Max(0f, 1f - dist / 4f);
+                            heightMap[nx, nz] = Mathf.Lerp(heightMap[nx, nz], h - 0.09f, factor * lakeDepthMultiplier);
                         }
                     }
-                }
-            }
-        }
-    }
-
-    void ApplyOcean()
-    {
-        for (int x = 0; x <= resolution; x++)
-        {
-            float nx = (float)x / resolution;
-            if (nx >= oceanWidth) continue;
-            for (int y = 0; y <= resolution; y++)
-            {
-                if (heightMap[x, y] > oceanLevel)
-                {
-                    heightMap[x, y] = Mathf.Lerp(heightMap[x, y], oceanLevel, 0.8f);
                 }
             }
         }
@@ -342,74 +171,247 @@ public class ProceduralTerrain : MonoBehaviour
 
     void BuildMesh()
     {
-        vertices = new Vector3[(resolution + 1) * (resolution + 1)];
-        triangles = new int[resolution * resolution * 6];
-        uv = new Vector2[vertices.Length];
+        Vector3[] vertices = new Vector3[(resolution + 1) * (resolution + 1)];
+        int[] triangles = new int[resolution * resolution * 6];
+        Vector2[] uv = new Vector2[vertices.Length];
 
-        for (int x = 0; x <= resolution; x++)
+        int i = 0;
+        for (int z = 0; z <= resolution; z++)
         {
-            for (int y = 0; y <= resolution; y++)
+            for (int x = 0; x <= resolution; x++)
             {
-                float h = heightMap[x, y];
-                vertices[y * (resolution + 1) + x] = new Vector3(x, h * heightMultiplier, y);
-                uv[y * (resolution + 1) + x] = new Vector2((float)x / resolution, (float)y / resolution);
+                vertices[i] = new Vector3(x * worldScale, heightMap[x, z] * heightMultiplier, z * worldScale);
+                uv[i] = new Vector2((float)x / resolution, (float)z / resolution);
+                i++;
             }
         }
 
         int t = 0;
-        for (int x = 0; x < resolution; x++)
+        for (int z = 0; z < resolution; z++)
         {
-            for (int y = 0; y < resolution; y++)
+            for (int x = 0; x < resolution; x++)
             {
-                int i = y * (resolution + 1) + x;
-                triangles[t++] = i;
-                triangles[t++] = i + resolution + 1;
-                triangles[t++] = i + 1;
-                triangles[t++] = i + 1;
-                triangles[t++] = i + resolution + 1;
-                triangles[t++] = i + resolution + 2;
+                int index = z * (resolution + 1) + x;
+                triangles[t++] = index;
+                triangles[t++] = index + resolution + 1;
+                triangles[t++] = index + 1;
+                triangles[t++] = index + 1;
+                triangles[t++] = index + resolution + 1;
+                triangles[t++] = index + resolution + 2;
             }
         }
-    }
 
-    void UpdateMesh()
-    {
-        mesh.Clear();
         mesh.vertices = vertices;
         mesh.triangles = triangles;
         mesh.uv = uv;
         mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+        GetComponent<MeshFilter>().sharedMesh = mesh;
+        meshCollider.sharedMesh = mesh;
     }
 
-    public float GetHeightAtPosition(float x, float z)
+    void UpdateCollider() => meshCollider.sharedMesh = mesh;
+
+    void ClearOldDetails()
     {
-        if (heightMap == null) return 0;
-
-        float nx = x / resolution;
-        float nz = z / resolution;
-
-        nx = Mathf.Clamp01(nx);
-        nz = Mathf.Clamp01(nz);
-
-        int xIndex = Mathf.FloorToInt(nx * resolution);
-        int zIndex = Mathf.FloorToInt(nz * resolution);
-
-        xIndex = Mathf.Clamp(xIndex, 0, resolution - 1);
-        zIndex = Mathf.Clamp(zIndex, 0, resolution - 1);
-
-        float xFraction = nx * resolution - xIndex;
-        float zFraction = nz * resolution - zIndex;
-
-        float h00 = heightMap[xIndex, zIndex];
-        float h10 = heightMap[xIndex + 1, zIndex];
-        float h01 = heightMap[xIndex, zIndex + 1];
-        float h11 = heightMap[xIndex + 1, zIndex + 1];
-
-        float h0 = Mathf.Lerp(h00, h10, xFraction);
-        float h1 = Mathf.Lerp(h01, h11, xFraction);
-        float height = Mathf.Lerp(h0, h1, zFraction);
-
-        return height * heightMultiplier;
+        for (int i = transform.childCount - 1; i >= 0; i--)
+            DestroyImmediate(transform.GetChild(i).gameObject);
     }
 
+    void SpawnDetails()
+    {
+        float rayHeight = heightMultiplier + 180f;
+
+        for (int x = 0; x < resolution; x += 3)
+        {
+            for (int z = 0; z < resolution; z += 3)
+            {
+                if (biomeMap[x, z] == 0 || heightMap[x, z] < seaLevel + 0.07f)
+                    continue;
+
+                Vector3 origin = new Vector3(x * worldScale, rayHeight, z * worldScale);
+
+                if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, 400f))
+                {
+                    float h = hit.point.y;
+
+                    if (h <= waterLevelY + 0.6f)
+                        continue;
+
+                    int gridX = Mathf.RoundToInt(hit.point.x / worldScale);
+                    int gridZ = Mathf.RoundToInt(hit.point.z / worldScale);
+                    gridX = Mathf.Clamp(gridX, 0, resolution);
+                    gridZ = Mathf.Clamp(gridZ, 0, resolution);
+
+                    bool inRiver = isRiver[gridX, gridZ];
+
+                    if (!inRiver)
+                    {
+                        for (int dx = -2; dx <= 2; dx++)
+                        {
+                            for (int dz = -1; dz <= 1; dz++)
+                            {
+                                int cx = Mathf.Clamp(gridX + dx, 0, resolution);
+                                int cz = Mathf.Clamp(gridZ + dz, 0, resolution);
+                                if (isRiver[cx, cz])
+                                {
+                                    inRiver = true;
+                                    break;
+                                }
+                            }
+                            if (inRiver) break;
+                        }
+                    }
+
+                    if (inRiver) continue;
+
+                    float terrainHeight01 = h / heightMultiplier;
+                    if (terrainHeight01 <= seaLevel + 0.10f)
+                        continue;
+
+                    float rnd = Random.value;
+
+                    if (biomeMap[x, z] == 2)
+                    {
+                        if (rnd < 0.08f && treePrefabs.Count > 0)
+                            Instantiate(treePrefabs[Random.Range(0, treePrefabs.Count)],
+                                hit.point + Vector3.up * 0.15f,
+                                Quaternion.identity,
+                                transform);
+                        else if (rnd < 0.22f && grassPrefabs.Count > 0)
+                            Instantiate(grassPrefabs[Random.Range(0, grassPrefabs.Count)],
+                                hit.point + Vector3.up * 0.1f,
+                                Quaternion.identity,
+                                transform);
+                    }
+                    else if (biomeMap[x, z] == 3 && rnd < 0.1f && rockPrefabs.Count > 0)
+                    {
+                        Instantiate(rockPrefabs[Random.Range(0, rockPrefabs.Count)],
+                            hit.point + Vector3.up * 0.12f,
+                            Quaternion.identity,
+                            transform);
+                    }
+                }
+            }
+        }
+    }
+
+    void GenerateSeaAndLakesWater()
+    {
+        for (int x = 0; x <= resolution; x += 3)
+        {
+            for (int z = 0; z <= resolution; z += 3)
+            {
+                if (heightMap[x, z] < seaLevel + 0.055f)
+                {
+                    var water = Instantiate(waterPrefab,
+                        new Vector3(x * worldScale, waterLevelY, z * worldScale),
+                        Quaternion.identity, transform);
+
+                    if (seaLakeMaterial != null)
+                        water.GetComponent<MeshRenderer>().material = seaLakeMaterial;
+                }
+            }
+        }
+    }
+
+    void GenerateRiver()
+    {
+        isRiver = new bool[resolution + 1, resolution + 1];
+
+        int x = Random.Range(resolution / 3, resolution - 50);
+        int z = Random.Range(60, resolution - 70);
+
+        for (int i = 0; i < 250; i++)
+        {
+            if (heightMap[x, z] > 0.57f) break;
+            x = Random.Range(resolution / 3, resolution - 40);
+            z = Random.Range(60, resolution - 60);
+        }
+
+        int steps = 0;
+        int lastDirectionChange = 0;
+
+        while (steps < 2800 && heightMap[x, z] > seaLevel + 0.055f)
+        {
+            steps++;
+
+            for (int w = -1; w <= 1; w++)
+            {
+                int nx = Mathf.Clamp(x + w, 0, resolution);
+                isRiver[nx, z] = true;
+
+                if (heightMap[nx, z] > seaLevel + 0.16f)
+                    heightMap[nx, z] = Mathf.Lerp(heightMap[nx, z], heightMap[nx, z] - 0.045f, 0.33f);
+            }
+
+            for (int w = -1; w <= 1; w++)
+            {
+                int nx = Mathf.Clamp(x + w, 0, resolution);
+
+                float riverY = heightMap[nx, z] * heightMultiplier + 0.6f;   
+
+                GameObject segment = Instantiate(waterPrefab,
+                    new Vector3(nx * worldScale, riverY, z * worldScale),
+                    Quaternion.identity, transform);
+
+                MeshRenderer mr = segment.GetComponent<MeshRenderer>();
+                if (mr != null)
+                {
+                    Material mat = new Material(mr.material);
+                    mat.mainTextureScale = new Vector2(riverTiling * 1.1f, riverTiling * 3.2f);
+                    mat.mainTextureOffset = new Vector2(Random.Range(0f, 1f), 0f);
+                    mr.material = mat;
+                    riverMaterials.Add(mat);
+                }
+            }
+
+            int bestX = x;
+            int bestZ = z;
+            float bestH = heightMap[x, z] + 10f;
+
+            for (int dx = -3; dx <= 3; dx++)
+            {
+                for (int dz = -2; dz <= 3; dz++)
+                {
+                    if (dx == 0 && dz == 0) continue;
+
+                    int nx = Mathf.Clamp(x + dx, 10, resolution - 10);
+                    int nz = Mathf.Clamp(z + dz, 10, resolution - 10);
+
+                    float penalty = dx * 0.20f;           
+                    float h = heightMap[nx, nz] + penalty;
+
+                    if (steps - lastDirectionChange > 14 && Random.value < 0.22f)
+                    {
+                        h += Random.Range(-0.06f, 0.06f);
+                        lastDirectionChange = steps;
+                    }
+
+                    if (h < bestH)
+                    {
+                        bestH = h;
+                        bestX = nx;
+                        bestZ = nz;
+                    }
+                }
+            }
+
+            if (bestX == x && bestZ == z) break;
+
+            x = bestX;
+            z = bestZ;
+        }
+    }
+
+    void Update()
+    {
+        foreach (Material mat in riverMaterials)
+        {
+            if (mat == null) continue;
+            Vector2 offset = mat.mainTextureOffset;
+            offset.x -= riverFlowSpeed * Time.deltaTime;
+            mat.mainTextureOffset = offset;
+        }
+    }
 }

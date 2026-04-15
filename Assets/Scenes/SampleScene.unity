@@ -275,7 +275,7 @@ Camera:
     y: 0
     width: 1
     height: 1
-  near clip plane: 0.3
+  near clip plane: 0.1
   far clip plane: 1000
   field of view: 60
   orthographic: 0
@@ -325,7 +325,6 @@ MonoBehaviour:
   moveSpeed: 50
   lookSpeed: 2
   zoomSpeed: 10
-  terrain: {fileID: 1808944407}
   minHeightAboveTerrain: 30
 --- !u!1 &1808944406
 GameObject:
@@ -360,12 +359,37 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   resolution: 200
-  heightMultiplier: 30
-  oceanLevel: 0.18
-  oceanWidth: 0.25
-  seed: 0
-  riverErosionStrength: 0.6
-  riverSmoothIterations: 3
+  heightMultiplier: 25
+  worldScale: 1
+  randomSeedOnPlay: 1
+  seed: 5
+  octaves: 6
+  persistence: 0.5
+  lacunarity: 2
+  baseFrequency: 1.5
+  seaLevel: 0.18
+  waterLevelY: 7
+  riverFlowSpeed: 1.4
+  riverTiling: 5
+  riverWidth: 1.8
+  lakeSearchStep: 6
+  lakeDepthMultiplier: 0.75
+  seaLakeMaterial: {fileID: 2100000, guid: 41554a712098b614cbbe049bcce77ae4, type: 2}
+  treePrefabs:
+  - {fileID: 192044, guid: 19682540d8a014522a319b1cf788aee2, type: 3}
+  - {fileID: 191266, guid: c44bd9bdc114d4a60932c0087d9d1732, type: 3}
+  - {fileID: 188006, guid: c6b7fb383a3534b039692b5485b6e739, type: 3}
+  - {fileID: 137650, guid: 826b6a0b570e8460990010fa615b5a2a, type: 3}
+  grassPrefabs:
+  - {fileID: 3174132282940848091, guid: a260f8e864547c24c9732e81afb6bd89, type: 3}
+  - {fileID: 9184738660166823662, guid: 320ee576bbdabab46813415687175840, type: 3}
+  - {fileID: 2958722734007276522, guid: c0d47bd4183663b4d959045e4b3d4643, type: 3}
+  rockPrefabs:
+  - {fileID: 157732, guid: 607de841ee73a2f438b88121ff782aab, type: 3}
+  - {fileID: 114764, guid: ddbca5453b26e0149adb083cd30a0e7d, type: 3}
+  - {fileID: 156558, guid: 0fb3743afdaf9824bb98ac048d1f51be, type: 3}
+  - {fileID: 189914, guid: 161babe19da76c043b1c27d840b13d0d, type: 3}
+  waterPrefab: {fileID: 4551284480806284336, guid: 427d0605c6060c0469f9fe8a14eceb6c, type: 3}
 --- !u!23 &1808944408
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -425,7 +449,7 @@ Transform:
   m_GameObject: {fileID: 1808944406}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 31.900637, y: 2.3701136, z: 180.3804}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

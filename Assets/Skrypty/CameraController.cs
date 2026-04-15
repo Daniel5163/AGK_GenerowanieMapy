@@ -9,24 +9,25 @@ public class CameraController : MonoBehaviour
     private float rotationX = 0f;
     private float rotationY = 0f;
 
+    public float minHeightAboveTerrain = 30f;
+
     void Start()
     {
         Cursor.lockState = CursorLockMode.Locked;
     }
 
-    public ProceduralTerrain terrain;
-    public float minHeightAboveTerrain = 30f;
-
     void LateUpdate()
     {
         Vector3 pos = transform.position;
 
-        float terrainHeight = terrain.GetHeightAtPosition(pos.x, pos.z);
+        Vector3 origin = pos + Vector3.up * 500f;
 
-        if (pos.y < terrainHeight + minHeightAboveTerrain)
+        if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, 1000f))
         {
-            pos.y = terrainHeight + minHeightAboveTerrain;
-            transform.position = pos;
+            float targetY = hit.point.y + minHeightAboveTerrain;
+
+            if (pos.y < targetY)
+                pos.y = targetY;
         }
 
         transform.position = pos;
