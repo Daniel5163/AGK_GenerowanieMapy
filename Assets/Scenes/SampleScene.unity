@@ -338,70 +338,15 @@ GameObject:
   - component: {fileID: 1808944409}
   - component: {fileID: 1808944408}
   - component: {fileID: 1808944411}
-  - component: {fileID: 1808944407}
+  - component: {fileID: 1808944412}
+  - component: {fileID: 1808944413}
   m_Layer: 3
-  m_Name: Terrain
+  m_Name: Terrain1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1808944407
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1808944406}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c39c154202860ba4cb94a9c9a725f32b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  resolution: 200
-  heightMultiplier: 68
-  worldScale: 1
-  randomSeedOnPlay: 1
-  seed: 0
-  octaves: 5
-  persistence: 0.47
-  lacunarity: 1.9
-  baseFrequency: 0.5
-  seaLevel: 0.26
-  waterLevelY: 13
-  riverFlowSpeed: 2
-  riverTiling: 8
-  riverWidth: 1.8
-  lakeSearchStep: 6
-  lakeDepthMultiplier: 0.78
-  seaLakeMaterial: {fileID: 2100000, guid: 41554a712098b614cbbe049bcce77ae4, type: 2}
-  treePrefabs:
-  - {fileID: 8941764418064359958, guid: 9d7a0bb6ab1051742906ad2d9d9d302b, type: 3}
-  - {fileID: 171535805972816138, guid: 26993d92f0b1be744aa9ec6e7ac50c41, type: 3}
-  - {fileID: 1644279909453382038, guid: f8751881d9b5353469de9c27b61f5021, type: 3}
-  grassPrefabs:
-  - {fileID: 6152034185041620853, guid: 2e62cbee7fb097048ade403645fdd7ea, type: 3}
-  - {fileID: 3174132282940848091, guid: a260f8e864547c24c9732e81afb6bd89, type: 3}
-  - {fileID: 9184738660166823662, guid: 320ee576bbdabab46813415687175840, type: 3}
-  rockPrefabs:
-  - {fileID: 157732, guid: 607de841ee73a2f438b88121ff782aab, type: 3}
-  - {fileID: 170408, guid: 975279b149c625d4bad9e7222b812858, type: 3}
-  - {fileID: 159376, guid: 51acb12fc3c85e740b23941a9febddef, type: 3}
-  waterPrefab: {fileID: 4551284480806284336, guid: 427d0605c6060c0469f9fe8a14eceb6c, type: 3}
-  housePrefabs:
-  - {fileID: 100000, guid: 22106dc63dce41746ad234a91af2d657, type: 3}
-  - {fileID: 100000, guid: 35807f23e7899e541b60b2fb2bbb51ef, type: 3}
-  - {fileID: 100000, guid: 1d3fc70685d97b748ac1264d8da02551, type: 3}
-  shopPrefabs: []
-  churchPrefab: {fileID: 5494066287743137430, guid: bb8138a46f1479e40b70fded80b756c6, type: 3}
-  schoolPrefab: {fileID: 100000, guid: 260808cfd9b21994d8c3007a7bc9934c, type: 3}
-  roadPrefab: {fileID: 100000, guid: 4f32dfddb033d3e40b5841bc53cc1689, type: 3}
-  polePrefab: {fileID: 100000, guid: 931fa17f0ab17504bbfc8903e54e6a16, type: 3}
-  streetLightPrefab: {fileID: 100000, guid: b8ee657c6800ab849bb30b4375d02323, type: 3}
-  villageSize: 22
-  minFlatness: 0.96
-  villageMinHeight: 0.28
-  maxVillageAttempts: 30
 --- !u!23 &1808944408
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -489,6 +434,84 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 0}
+--- !u!114 &1808944412
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1808944406}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c39c154202860ba4cb94a9c9a725f32b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  resolution: 500
+  heightMultiplier: 90
+  worldScale: 1
+  randomSeedOnPlay: 1
+  seed: 0
+  octaves: 5
+  persistence: 0.47
+  lacunarity: 1.9
+  baseFrequency: 0.5
+  seaLevel: 0.26
+  riverFlowSpeed: 2
+  riverWidth: 5
+  riverDepth: 4
+  lakeSearchStep: 6
+  lakeDepthMultiplier: 0.78
+  guaranteedLakeCount: 1
+  snowHeightThreshold: 0.71
+  snowBlend: 0.78
+  mountainBaseColor: {r: 0.4, g: 0.41, b: 0.45, a: 1}
+  seaLakeMaterial: {fileID: 2100000, guid: 41554a712098b614cbbe049bcce77ae4, type: 2}
+  riverMaterial: {fileID: 2100000, guid: 59d19a8bceaff8f4991bac125a73ae97, type: 2}
+  treePrefabs:
+  - {fileID: 8941764418064359958, guid: 9d7a0bb6ab1051742906ad2d9d9d302b, type: 3}
+  - {fileID: 171535805972816138, guid: 26993d92f0b1be744aa9ec6e7ac50c41, type: 3}
+  - {fileID: 1644279909453382038, guid: f8751881d9b5353469de9c27b61f5021, type: 3}
+  grassPrefabs:
+  - {fileID: 6152034185041620853, guid: 2e62cbee7fb097048ade403645fdd7ea, type: 3}
+  - {fileID: 3174132282940848091, guid: a260f8e864547c24c9732e81afb6bd89, type: 3}
+  - {fileID: 9184738660166823662, guid: 320ee576bbdabab46813415687175840, type: 3}
+  rockPrefabs:
+  - {fileID: 157732, guid: 607de841ee73a2f438b88121ff782aab, type: 3}
+  - {fileID: 170408, guid: 975279b149c625d4bad9e7222b812858, type: 3}
+  - {fileID: 159376, guid: 51acb12fc3c85e740b23941a9febddef, type: 3}
+  housePrefabs:
+  - {fileID: 100000, guid: 22106dc63dce41746ad234a91af2d657, type: 3}
+  - {fileID: 100000, guid: 35807f23e7899e541b60b2fb2bbb51ef, type: 3}
+  - {fileID: 100000, guid: 1d3fc70685d97b748ac1264d8da02551, type: 3}
+  shopPrefabs: []
+  churchPrefab: {fileID: 5494066287743137430, guid: bb8138a46f1479e40b70fded80b756c6, type: 3}
+  schoolPrefab: {fileID: 100000, guid: 260808cfd9b21994d8c3007a7bc9934c, type: 3}
+  roadPrefab: {fileID: 100000, guid: 4f32dfddb033d3e40b5841bc53cc1689, type: 3}
+  lampPostPrefab: {fileID: 100000, guid: b8ee657c6800ab849bb30b4375d02323, type: 3}
+  benchPrefab: {fileID: 100000, guid: 6458a4c9f91f22741a5064b5b7cfd892, type: 3}
+  flowerPrefab: {fileID: 100000, guid: 0ee6d569ec3227e40888e8151b331e0f, type: 3}
+  binPrefab: {fileID: 100000, guid: d59a4f6080634af41a616bc51af1d2d9, type: 3}
+  fireplugPrefab: {fileID: 100000, guid: e0e851c58997b9c438fae494e3412749, type: 3}
+  signPrefab: {fileID: 100000, guid: 24ecc5bb467b3fe4b9c1660c3678ef90, type: 3}
+  fencePrefab: {fileID: 100000, guid: d2100f10c342364479e7a527f9ef5429, type: 3}
+  villageSize: 22
+  minFlatness: 0.96
+  numberOfVillages: 5
+  minDistanceBetweenVillages: 45
+  roadWidth: 4
+--- !u!114 &1808944413
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1808944406}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2e8d707cfb3bb9f48baad7108fdafb1c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  scrollSpeed: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

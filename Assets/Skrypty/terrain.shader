@@ -1,19 +1,17 @@
-Shader "Custom/TerrainStable"
+﻿Shader "Custom/TerrainStable"
 {
     Properties
     {
         _Sand ("Sand", 2D) = "white" {}
         _Grass ("Grass", 2D) = "white" {}
-        _Rock ("Rock", 2D) = "white" {}
+        _Rock ("Rock (Gray Mountains)", 2D) = "white" {}
         _Snow ("Snow", 2D) = "white" {}
-
         _WaterColor ("Water Color", Color) = (0,0.4,0.8,0.6)
-        _WaterLevel ("Water Level", Float) = 5
-        _HeightMultiplier ("Height Multiplier", Float) = 25
-        _FlowSpeed ("Water Flow Speed", Float) = 0.3
-        _FlowStrength ("Wave Strength", Float) = 0.05
+        _SeaLevel ("Sea Level (0-1)", Range(0,1)) = 0.26
+        _TriplanarScale ("Texture Scale", Float) = 12
+        _SnowStart ("Snow Start Height", Range(0,1)) = 0.68
+        _SnowFade ("Snow Fade", Range(0,0.3)) = 0.12
     }
-
     SubShader
     {
         Tags { "RenderType"="Opaque" }
@@ -24,19 +22,14 @@ Shader "Custom/TerrainStable"
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
-
             #include "UnityCG.cginc"
 
-            sampler2D _Sand;
-            sampler2D _Grass;
-            sampler2D _Rock;
-            sampler2D _Snow;
-
+            sampler2D _Sand, _Grass, _Rock, _Snow;
             float4 _WaterColor;
-            float _WaterLevel;
-            float _HeightMultiplier;
-            float _FlowSpeed;
-            float _FlowStrength;
+            float _SeaLevel;
+            float _TriplanarScale;
+            float _SnowStart;
+            float _SnowFade;
 
             struct appdata
             {
@@ -48,56 +41,60 @@ Shader "Custom/TerrainStable"
             {
                 float4 pos : SV_POSITION;
                 float2 uv : TEXCOORD0;
-                float height : TEXCOORD1;
-                float worldY : TEXCOORD2;
-                float2 worldXZ : TEXCOORD3;
+                float height01 : TEXCOORD1;
+                float3 worldPos : TEXCOORD2;
             };
 
             v2f vert (appdata v)
             {
                 v2f o;
-
                 o.pos = UnityObjectToClipPos(v.vertex);
                 o.uv = v.uv;
-
-                o.worldY = v.vertex.y;
-                o.worldXZ = v.vertex.xz;
-
-                o.height = saturate(v.vertex.y / _HeightMultiplier);
-
+                o.worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
+                o.height01 = saturate(v.vertex.y / 120.0);
                 return o;
             }
 
+            float hash(float2 p) { return frac(sin(dot(p, float2(12.9898,78.233))) * 43758.5453); }
             float noise(float2 p)
             {
-                return frac(sin(dot(p, float2(12.9898,78.233))) * 43758.5453);
+                float2 i = floor(p);
+                float2 f = frac(p);
+                float a = hash(i), b = hash(i + float2(1,0));
+                float c = hash(i + float2(0,1)), d = hash(i + float2(1,1));
+                float2 u = f * f * (3.0 - 2.0 * f);
+                return lerp(lerp(a,b,u.x), lerp(c,d,u.x), u.y);
             }
 
             fixed4 frag (v2f i) : SV_Target
             {
-                float h = i.height;
+                float h = i.height01;
+                float2 uv = i.uv * _TriplanarScale;
 
-                fixed4 col;
+                fixed4 sand  = tex2D(_Sand, uv);
+                fixed4 grass = tex2D(_Grass, uv);
+                fixed4 rock  = tex2D(_Rock, uv);
+                fixed4 snow  = tex2D(_Snow, uv);
 
-                if (h < 0.3) col = tex2D(_Sand, i.uv * 12);
-                else if (h < 0.5) col = tex2D(_Grass, i.uv * 8);
-                else if (h < 0.7) col = tex2D(_Rock, i.uv * 6);
-                else col = tex2D(_Snow, i.uv * 5);
+                float sandMask  = 1 - smoothstep(0.20, 0.32, h);
+                float grassMask = smoothstep(0.25, 0.48, h) * (1 - smoothstep(0.52, 0.62, h));
+                float rockMask  = smoothstep(0.45, 0.72, h);
+                float snowMask  = smoothstep(_SnowStart, _SnowStart + _SnowFade, h);
 
-                float waterMask = step(i.worldY, _WaterLevel);
+                fixed4 col = sand * sandMask + 
+                             grass * grassMask + 
+                             rock * rockMask + 
+                             snow * snowMask;
 
-                float t = _Time.y * _FlowSpeed;
+                col = lerp(col, rock * 0.95, rockMask * 0.6);
 
-                float2 flowUV = i.worldXZ * 0.1 + float2(t, t * 0.7);
-
-                float wave = noise(flowUV) * _FlowStrength;
-
-                float waterEffect = waterMask * _WaterColor.a;
-
-                fixed4 waterCol = _WaterColor;
+                float waterMask = 1 - smoothstep(_SeaLevel - 0.03, _SeaLevel + 0.03, h);
+                float t = _Time.y * 0.3;
+                float wave = noise(i.worldPos.xz * 0.1 + float2(t, t*0.6)) * 0.08;
+                float4 waterCol = _WaterColor;
                 waterCol.rgb += wave;
 
-                col = lerp(col, waterCol, waterEffect);
+                col = lerp(col, waterCol, waterMask * _WaterColor.a);
 
                 return col;
             }
